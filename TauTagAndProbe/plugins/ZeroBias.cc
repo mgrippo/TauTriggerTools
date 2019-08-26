@@ -1103,8 +1103,11 @@ void ZeroBias::analyze(const edm::Event& iEvent, const edm::EventSetup& eSetup)
   if(jetView.isValid() && chargedHadronAssoc.isValid() && piZeroAssoc.isValid()){
   
     reco::PFJetRefVector jets = reco::tau::castView<reco::PFJetRefVector>(jetView);
+    for(size_t ij = 0; ij < jetView->size(); ij++){
+      const auto& jetRef = jetView->refAt(ij);
 
-    BOOST_FOREACH( reco::PFJetRef jetRef, jets ) {
+      //BOOST_FOREACH( reco::PFJetRef jetRef, jets ) {   
+    
 
       //reco::PFJetRef jetRegionRef = (*PFJetRegion_Handle)[jetRef];
       const std::vector<reco::PFRecoTauChargedHadron>& chargedHadrons = (*chargedHadronAssoc)[jetRef];
