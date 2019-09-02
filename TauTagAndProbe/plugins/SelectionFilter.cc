@@ -31,6 +31,11 @@ public:
         met_token(consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"))),
         triggerResults_token(consumes<edm::TriggerResults>(cfg.getParameter<edm::InputTag>("triggerResults")))
     {
+        const edm::ParameterSet& customMetFilters = cfg.getParameterSet("customMetFilters");
+        for(const auto& filterName : customMetFilters.getParameterNames()) {
+            customMetFilters_token[filterName] =
+                mayConsume<bool>(customMetFilters.getParameter<edm::InputTag>(filterName));
+        }
         produces<pat::MuonRefVector>();
     }
 
@@ -39,16 +44,16 @@ private:
     {
         edm::Handle<pat::MuonCollection> muons;
         event.getByToken(muons_token, muons);
-        auto signalMuonCandidates = std::make_unique<std::vector<pat::MuonRef>>();
+        std::vector<pat::MuonRef> signalMuonCandidates;
         for(size_t n = 0; n < muons->size(); ++n) {
             const pat::Muon& muon = muons->at(n);
             if(muon.polarP4().pt() > 2.4 && std::abs(muon.polarP4().eta()) < 2.1 && muon.isMediumMuon())
-                signalMuonCandidates->emplace_back(muons, n);
+                signalMuonCandidates.emplace_back(muons, n);
         }
-        if(signalMuonCandidates->empty()) return false;
-        std::sort(signalMuonCandidates->begin(), signalMuonCandidates->end(),
+        if(signalMuonCandidates.empty()) return false;
+        std::sort(signalMuonCandidates.begin(), signalMuonCandidates.end(),
                   [](const pat::MuonRef& a, const pat::MuonRef& b) { return MuonIsolation(*a) < MuonIsolation(*b); });
-        const pat::Muon& signalMuon = *signalMuonCandidates->at(0);
+        const pat::Muon& signalMuon = *signalMuonCandidates.at(0);
         for(const pat::Muon& muon : *muons) {
             if(&muon != &signalMuon && muon.isLooseMuon() && muon.polarP4().pt() > 10
                     && std::abs(muon.polarP4().eta()) < 2.4 && MuonIsolation(muon) < 0.3)
@@ -82,14 +87,26 @@ private:
         edm::Handle<edm::TriggerResults> triggerResults;
         event.getByToken(triggerResults_token, triggerResults);
         const edm::TriggerNames& triggerNames = event.triggerNames(*triggerResults);
-        for(const std::string& metFilter : metFilters) {
-            const size_t index = triggerNames.triggerIndex(metFilter);
+        const auto passFilter = [&](const std::string& filter) {
+            auto iter = customMetFilters_token.find(filter);
+            if(iter != customMetFilters_token.end()) {
+                edm::Handle<bool> result;
+                event.getByToken(iter->second, result);
+                return *result;
+            }
+            const size_t index = triggerNames.triggerIndex(filter);
             if(index == triggerNames.size())
-                throw cms::Exception("TauTriggerSelectionFilter") << "MET filter '" << metFilter << "' not found.";
-            if(!triggerResults->accept(index))
+                throw cms::Exception("TauTriggerSelectionFilter") << "MET filter '" << filter << "' not found.";
+            return triggerResults->accept(index);
+        };
+        for(const std::string& metFilter : metFilters) {
+            if(!passFilter(metFilter))
                 return false;
         }
-        event.put(std::move(signalMuonCandidates));
+
+        auto signalMuonOutput = std::make_unique<pat::MuonRefVector>();
+        signalMuonOutput->push_back(signalMuonCandidates.at(0));
+        event.put(std::move(signalMuonOutput));
         return true;
     }
 
@@ -102,6 +119,7 @@ private:
     edm::EDGetTokenT<pat::JetCollection> jets_token;
     edm::EDGetTokenT<pat::METCollection> met_token;
     edm::EDGetTokenT<edm::TriggerResults> triggerResults_token;
+    std::map<std::string, edm::EDGetTokenT<bool>> customMetFilters_token;
 
 };
 

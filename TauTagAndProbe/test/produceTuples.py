@@ -1,7 +1,7 @@
 import re
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
-from TauTriggerTools.TauTagAndProbe.ProduceHelpers import *
+from TauTriggerTools.Common.ProduceHelpers import *
 
 options = VarParsing('analysis')
 options.register('inputFileList', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
@@ -76,6 +76,7 @@ tauSrc_InputTag = cms.InputTag(updatedTauName)
 
 # Update MET filters according recommendations from https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2
 process.metFilterSequence = cms.Sequence()
+customMetFilters = cms.PSet()
 if options.period in [ 'Run2017', 'Run2018', 'Run2018ABC', 'Run2018D' ]:
     process.load('RecoMET.METFilters.ecalBadCalibFilter_cfi')
     baddetEcallist = cms.vuint32([
@@ -97,6 +98,7 @@ if options.period in [ 'Run2017', 'Run2018', 'Run2018ABC', 'Run2018D' ]:
         debug = cms.bool(False)
     )
     process.metFilterSequence += process.ecalBadCalibReducedMINIAODFilter
+    customMetFilters.ecalBadCalibReducedMINIAODFilter = cms.InputTag("ecalBadCalibReducedMINIAODFilter")
 
 # Re-apply MET corrections
 if options.period in [ 'Run2016', 'Run2017' ]:
@@ -127,14 +129,15 @@ process.hltFilter = hlt.hltHighLevel.clone(
 )
 
 process.selectionFilter = cms.EDFilter("TauTriggerSelectionFilter",
-    electrons       = cms.InputTag('slimmedElectrons'),
-    muons           = cms.InputTag('slimmedMuons'),
-    jets            = cms.InputTag('slimmedJets'),
-    met             = metInputTag,
-    triggerResults  = cms.InputTag('triggerResults'),
-    btagThreshold   = cms.double(getBtagThreshold(options.period, 'Loose')),
-    metFilters      = cms.vstring(getMetFilters(options.period, options.isMC)),
-    mtCut           = cms.double(-1)
+    electrons        = cms.InputTag('slimmedElectrons'),
+    muons            = cms.InputTag('slimmedMuons'),
+    jets             = cms.InputTag('slimmedJets'),
+    met              = metInputTag,
+    triggerResults   = cms.InputTag('TriggerResults', '', 'PAT'),
+    customMetFilters = customMetFilters,
+    btagThreshold    = cms.double(getBtagThreshold(options.period, 'Loose')),
+    metFilters       = cms.vstring(getMetFilters(options.period, options.isMC)),
+    mtCut            = cms.double(-1)
 )
 
 process.tupleProducer = cms.EDProducer("TauTriggerTupleProducer",
