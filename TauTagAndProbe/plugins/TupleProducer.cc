@@ -186,34 +186,32 @@ private:
 
     std::map<const pat::Tau*, unsigned> CollectTaus(const pat::Muon* muon, const pat::TauCollection& taus) const
     {
+        static const std::string mvaIdName = "byIsolationMVArun2017v2DBoldDMwLTraw2017";
+        static const std::string deepIdName = "byDeepTau2017v2p1VSjetraw";
         std::map<const pat::Tau*, unsigned> selected_taus;
-        std::vector<const pat::Tau*> tau_vec;
+        std::map<analysis::TauSelection, const pat::Tau*> best_tau;
         for(const auto& tau : taus) {
             auto leadChargedHadrCand = dynamic_cast<const pat::PackedCandidate*>(tau.leadChargedHadrCand().get());
             if(tau.polarP4().pt() > 20 && std::abs(tau.polarP4().eta()) < 2.3
                     && leadChargedHadrCand && std::abs(leadChargedHadrCand->dz()) < 0.2
                     && (!muon || reco::deltaR2(muon->polarP4(), tau.polarP4()) > deltaR2Thr)) {
-                tau_vec.push_back(&tau);
+                const bool pass_mva_sel = tau.tauID("againstMuonLoose3") > 0.5f;
+                const bool pass_deep_sel = tau.isTauIDAvailable("byDeepTau2017v2p1VSjetraw")
+                    && tau.tauID("byVVVLooseDeepTau2017v2p1VSe") > 0.5f
+                    && tau.tauID("byVLooseDeepTau2017v2p1VSmu") > 0.5f;
+                if((pass_mva_sel || pass_deep_sel) && (!best_tau.count(analysis::TauSelection::pt)
+                        || best_tau.at(analysis::TauSelection::pt)->polarP4().pt() < tau.polarP4().pt()))
+                    best_tau[analysis::TauSelection::pt] = &tau;
+                if(pass_mva_sel && (!best_tau.count(analysis::TauSelection::MVA)
+                        || best_tau.at(analysis::TauSelection::MVA)->tauID(mvaIdName) < tau.tauID(mvaIdName)))
+                    best_tau[analysis::TauSelection::MVA] = &tau;
+                if(pass_deep_sel && (!best_tau.count(analysis::TauSelection::DeepTau)
+                        || best_tau.at(analysis::TauSelection::DeepTau)->tauID(deepIdName) < tau.tauID(deepIdName)))
+                    best_tau[analysis::TauSelection::DeepTau] = &tau;
             }
         }
-        if(!tau_vec.empty()) {
-            const pat::Tau* tau = *std::max_element(tau_vec.begin(), tau_vec.end(),
-                [](const pat::Tau* tau1, const pat::Tau* tau2) { return tau1->polarP4().pt() < tau2->polarP4().pt(); });
-            selected_taus[tau] |= static_cast<unsigned>(analysis::TauSelection::pt);
-
-            const auto selectBest = [&](const std::string& discr_name, analysis::TauSelection sel) {
-                if(tau_vec.at(0)->isTauIDAvailable(discr_name)) {
-                    tau = *std::max_element(tau_vec.begin(), tau_vec.end(),
-                        [&](const pat::Tau* tau1, const pat::Tau* tau2) {
-                            return tau1->tauID(discr_name) < tau2->tauID(discr_name);
-                        });
-                    selected_taus[tau] |= static_cast<unsigned>(sel);
-                }
-            };
-
-            selectBest("byIsolationMVArun2017v2DBoldDMwLTraw2017", analysis::TauSelection::MVA);
-            selectBest("byDeepTau2017v2p1VSjetraw", analysis::TauSelection::DeepTau);
-        }
+        for(const auto& entry : best_tau)
+            selected_taus[entry.second] |= static_cast<unsigned>(entry.first);
         return selected_taus;
     }
 
