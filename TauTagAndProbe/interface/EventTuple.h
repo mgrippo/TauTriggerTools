@@ -19,68 +19,36 @@
     VAR(UInt_t, lumi) /* lumi section */ \
     VAR(ULong64_t, evt) /* event number */ \
     VAR(Int_t, npv) /* number of primary vertices */ \
-    VAR(Float_t, rho) /* fixed grid energy density */ \
     VAR(Float_t, genEventWeight) /* gen event weight */ \
     VAR(Float_t, npu) /* number of in-time pu interactions added to the event */ \
-    VAR3(Float_t, pv_x, pv_y, pv_z) /* position of the primary vertex (PV) */ \
-    VAR(Float_t, pv_chi2) /* chi^2 of the primary vertex (PV) */ \
-    VAR(Float_t, pv_ndof) /* number of degrees of freedom of the primary vertex (PV) */ \
+    /* PF MET variables */ \
+    VAR2(Float_t, met_pt, met_phi) /* pt and phi of the MET */ \
+    /* Tag muon variables */ \
+    VAR4(Float_t, muon_pt, muon_eta, muon_phi, muon_mass) /* 4-momentum of the muon */ \
+    VAR(Int_t, muon_charge) /* muon charge */ \
+    VAR(Float_t, muon_iso) /* muon pfRel isolation */ \
+    VAR(Float_t, muon_mt) /* muon transverse mass */ \
     /* Basic tau variables */ \
-    VAR(Int_t, tau_sel) /* how tau was selected */ \
+    VAR(UInt_t, tau_sel) /* how tau was selected */ \
     VAR4(Float_t, tau_pt, tau_eta, tau_phi, tau_mass) /* 4-momentum of the tau */ \
     VAR(Int_t, tau_charge) /* tau charge */ \
     VAR(Int_t, lepton_gen_match) /* matching with leptons on the generator level (see Htautau Twiki for details):
                                     Electron = 1, Muon = 2, TauElectron = 3, TauMuon = 4, Tau = 5, NoMatch = 6 */\
     VAR(Int_t, lepton_gen_charge) /* charge of the matched gen lepton */ \
-    VAR4(Float_t, lepton_gen_pt, lepton_gen_eta, \
-                  lepton_gen_phi, lepton_gen_mass) /* 4-momentum of the matched gen lepton */ \
-    VAR(std::vector<Int_t>, lepton_gen_vis_pdg) /* PDG of the matched lepton */ \
-    VAR4(std::vector<Float_t>, lepton_gen_vis_pt, lepton_gen_vis_eta, \
-                               lepton_gen_vis_phi, lepton_gen_vis_mass) /* 4-momenta of the visible products
-                                                                           of the matched gen lepton */ \
-    VAR(Int_t, qcd_gen_match) /* matching with QCD particles on the generator level:
-                                 NoMatch = 0, Down = 1, Up = 2, Strange = 3, Charm = 4, Bottom = 5, Top = 6,
-                                 Gluon = 21 */ \
-    VAR(Int_t, qcd_gen_charge) /* charge of the matched gen QCD particle */ \
-    VAR4(Float_t, qcd_gen_pt, qcd_gen_eta, qcd_gen_phi, qcd_gen_mass) /* 4-momentum of the matched gen QCD particle */ \
+    VAR4(Float_t, lepton_gen_vis_pt, lepton_gen_vis_eta, \
+                  lepton_gen_vis_phi, lepton_gen_vis_mass) /* visible 4-momentum of the matched gen lepton */ \
     /* Tau ID variables */ \
     VAR(Int_t, tau_decayMode) /* tau decay mode */ \
-    VAR(Int_t, tau_decayModeFinding) /* tau passed the old decay mode finding requirements */ \
-    VAR(Int_t, tau_decayModeFindingNewDMs) /* tau passed the new decay mode finding requirements */ \
-    VAR(Float_t, chargedIsoPtSum) /* sum of the transverse momentums of charged pf candidates inside
-                                     the tau isolation cone with dR < 0.5 */ \
-    VAR(Float_t, chargedIsoPtSumdR03) /* sum of the transverse momentums of charged pf candidates inside
-                                         the tau isolation cone with dR < 0.3 */ \
-    VAR(Float_t, footprintCorrection) /* tau footprint correction inside the tau isolation cone with dR < 0.5 */ \
-    VAR(Float_t, footprintCorrectiondR03) /* tau footprint correction inside the tau isolation cone with dR < 0.3 */ \
-    VAR(Float_t, neutralIsoPtSum) /* sum of the transverse momentums of neutral pf candidates inside
-                                     the tau isolation cone with dR < 0.5 */ \
-    VAR(Float_t, neutralIsoPtSumWeight) /* weighted sum of the transverse momentums of neutral pf candidates inside
-                                           the tau isolation cone with dR < 0.5 */ \
-    VAR(Float_t, neutralIsoPtSumWeightdR03) /* weighted sum of the transverse momentums of neutral pf candidates inside
-                                               the tau isolation cone with dR < 0.3 */ \
-    VAR(Float_t, neutralIsoPtSumdR03) /* sum of the transverse momentums of neutral pf candidates inside
-                                         the tau isolation cone with dR < 0.3 */ \
-    VAR(Float_t, photonPtSumOutsideSignalCone) /* sum of the transverse momentums of photons
-                                                  inside the tau isolation cone with dR < 0.5 */ \
-    VAR(Float_t, photonPtSumOutsideSignalConedR03) /* sum of the transverse momentums of photons inside
-                                                      the tau isolation cone with dR < 0.3 */ \
-    VAR(Float_t, puCorrPtSum) /* pile-up correction for the sum of the transverse momentums */ \
+    VAR(Bool_t, tau_oldDecayModeFinding) /* tau passed the old decay mode finding requirements */ \
     TAU_IDS() \
     /* Tau transverse impact paramters.
        See cmssw/RecoTauTag/RecoTau/plugins/PFTauTransverseImpactParameters.cc for details */ \
-    VAR3(Float_t, tau_dxy_pca_x, tau_dxy_pca_y, tau_dxy_pca_z) /* The point of closest approach (PCA) of
-                                                                  the leadPFChargedHadrCand to the primary vertex */ \
     VAR(Float_t, tau_dxy) /* tau signed transverse impact parameter wrt to the primary vertex */ \
     VAR(Float_t, tau_dxy_error) /* uncertainty of the transverse impact parameter measurement */ \
     VAR(Float_t, tau_ip3d) /* tau signed 3D impact parameter wrt to the primary vertex */ \
     VAR(Float_t, tau_ip3d_error) /* uncertainty of the 3D impact parameter measurement */ \
     VAR(Float_t, tau_dz) /* tau dz of the leadChargedHadrCand wrt to the primary vertex */ \
     VAR(Float_t, tau_dz_error) /* uncertainty of the tau dz measurement */ \
-    VAR(Int_t, tau_hasSecondaryVertex) /* tau has the secondary vertex */ \
-    VAR3(Float_t, tau_sv_x, tau_sv_y, tau_sv_z) /* position of the secondary vertex */ \
-    VAR3(Float_t, tau_flightLength_x, tau_flightLength_y, tau_flightLength_z) /* flight length of the tau */ \
-    VAR(Float_t, tau_flightLength_sig) /* significance of the flight length measurement */ \
     /**/
 
 #define VAR(type, name) DECLARE_BRANCH_VARIABLE(type, name)

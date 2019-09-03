@@ -68,28 +68,26 @@ import RecoTauTag.RecoTau.tools.runTauIdMVA as tauIdConfig
 updatedTauName = "slimmedTausNewID"
 tauIdsToKeep = [ "2017v2" ]
 if options.runDeepTau:
-    tauIdsToKeep.append("deepTau2017v2")
-tauIdEmbedder = tauIdConfig.TauIDEmbedder(process, cms, debug = False,
-    updatedTauName = updatedTauName, toKeep = tauIdsToKeep )
+    tauIdsToKeep.append("deepTau2017v2p1")
+tauIdEmbedder = tauIdConfig.TauIDEmbedder(process, cms, debug=False, updatedTauName=updatedTauName,
+                                          toKeep=tauIdsToKeep)
 tauIdEmbedder.runTauID()
 tauSrc_InputTag = cms.InputTag(updatedTauName)
 
 # Update MET filters according recommendations from https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2
+# Using post-Moriond2019 (a more complete) list of noisy crystals
 process.metFilterSequence = cms.Sequence()
 customMetFilters = cms.PSet()
 if options.period in [ 'Run2017', 'Run2018', 'Run2018ABC', 'Run2018D' ]:
     process.load('RecoMET.METFilters.ecalBadCalibFilter_cfi')
     baddetEcallist = cms.vuint32([
-        872439604,872422825,872420274,872423218,
-        872423215,872416066,872435036,872439336,
-        872420273,872436907,872420147,872439731,
-        872436657,872420397,872439732,872439339,
-        872439603,872422436,872439861,872437051,
-        872437052,872420649,872422436,872421950,
-        872437185,872422564,872421566,872421695,
-        872421955,872421567,872437184,872421951,
-        872421694,872437056,872437057,872437313
-    ])
+        872439604,872422825,872420274,872423218,872423215,872416066,872435036,872439336,
+        872420273,872436907,872420147,872439731,872436657,872420397,872439732,872439339,
+        872439603,872422436,872439861,872437051,872437052,872420649,872421950,872437185,
+        872422564,872421566,872421695,872421955,872421567,872437184,872421951,872421694,
+        872437056,872437057,872437313,872438182,872438951,872439990,872439864,872439609,
+        872437181,872437182,872437053,872436794,872436667,872436536,872421541,872421413,
+        872421414,872421031,872423083,872421439])
     process.ecalBadCalibReducedMINIAODFilter = cms.EDFilter("EcalBadCalibFilter",
         EcalRecHitSource = cms.InputTag("reducedEgamma:reducedEERecHits"),
         ecalMinEt = cms.double(50.),
@@ -135,7 +133,7 @@ process.selectionFilter = cms.EDFilter("TauTriggerSelectionFilter",
     met              = metInputTag,
     triggerResults   = cms.InputTag('TriggerResults', '', 'PAT'),
     customMetFilters = customMetFilters,
-    btagThreshold    = cms.double(getBtagThreshold(options.period, 'Loose')),
+    btagThreshold    = cms.double(-1),
     metFilters       = cms.vstring(getMetFilters(options.period, options.isMC)),
     mtCut            = cms.double(-1)
 )
@@ -149,31 +147,10 @@ process.tupleProducer = cms.EDProducer("TauTriggerTupleProducer",
     vertices        = cms.InputTag('offlineSlimmedPrimaryVertices'),
     signalMuon      = cms.InputTag('selectionFilter'),
     taus            = tauSrc_InputTag,
+    jets            = cms.InputTag('slimmedJets'),
+    met             = metInputTag,
+    btagThreshold   = cms.double(getBtagThreshold(options.period, 'Loose')),
 )
-
-# # Load and setups tag-and-probe module
-# process.load('TauTagAndProbe.TauTagAndProbe.tagAndProbe_cff')
-# if options.useCustomHLT:
-#     customHLT = "MYHLT"
-#     process.hltFilter.TriggerResultsTag = cms.InputTag("TriggerResults", "", customHLT)
-#     process.Ntuplizer.triggerSet = cms.InputTag("selectedPatTriggerCustom", "", customHLT)
-#     process.Ntuplizer.triggerResultsLabel = cms.InputTag("TriggerResults", "", customHLT)
-#     process.Ntuplizer.L2CaloJet_ForIsoPix_Collection = cms.InputTag("hltL2TausForPixelIsolation", "", customHLT)
-#     process.Ntuplizer.L2CaloJet_ForIsoPix_IsoCollection = cms.InputTag("hltL2TauPixelIsoTagProducer", "", customHLT)
-# process.genMatchSequence = cms.Sequence()
-# if options.isMC and options.useGenMatch:
-#     process.Ntuplizer.taus = cms.InputTag("genMatchedTaus")
-#     process.genMatchSequence += process.genMatchedSeq
-
-# Path to execute
-# process.p = cms.Path(
-#     process.egammaPostRecoSeq +
-#     getattr(process, updatedTauName) +
-#     process.metFilterSequence +
-#     process.TAndPseq +
-#     process.genMatchSequence +
-#     process.NtupleSeq
-# )
 
 process.p = cms.Path(
     process.egammaPostRecoSeq +

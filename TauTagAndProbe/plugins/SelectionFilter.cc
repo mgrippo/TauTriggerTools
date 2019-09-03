@@ -1,5 +1,5 @@
 /*! Apply tau trigger selection vetoes.
-*/
+This file is part of https://github.com/cms-tau-pog/TauTriggerTools. */
 
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "FWCore/Framework/interface/EDFilter.h"
@@ -15,7 +15,6 @@
 
 #include "TauTriggerTools/Common/interface/AnalysisTypes.h"
 #include "TauTriggerTools/Common/interface/PatHelpers.h"
-
 
 namespace tau_trigger {
 
@@ -44,6 +43,8 @@ private:
     {
         edm::Handle<pat::MuonCollection> muons;
         event.getByToken(muons_token, muons);
+
+        // Find signal muon
         std::vector<pat::MuonRef> signalMuonCandidates;
         for(size_t n = 0; n < muons->size(); ++n) {
             const pat::Muon& muon = muons->at(n);
@@ -54,18 +55,13 @@ private:
         std::sort(signalMuonCandidates.begin(), signalMuonCandidates.end(),
                   [](const pat::MuonRef& a, const pat::MuonRef& b) { return MuonIsolation(*a) < MuonIsolation(*b); });
         const pat::Muon& signalMuon = *signalMuonCandidates.at(0);
+
+        // Apply third lepton veto
         for(const pat::Muon& muon : *muons) {
             if(&muon != &signalMuon && muon.isLooseMuon() && muon.polarP4().pt() > 10
                     && std::abs(muon.polarP4().eta()) < 2.4 && MuonIsolation(muon) < 0.3)
                 return false;
         }
-
-        edm::Handle<pat::METCollection> metCollection;
-        event.getByToken(met_token, metCollection);
-        const pat::MET& met = metCollection->at(0);
-        const analysis::LorentzVectorM met_p4(met.pt(), 0, met.phi(), 0);
-        if(mtCut > 0 && Calculate_MT(signalMuon.polarP4(), met_p4) > mtCut) return false;
-
         edm::Handle<pat::ElectronCollection> electrons;
         event.getByToken(electrons_token, electrons);
         for(const pat::Electron& ele : *electrons) {
@@ -74,16 +70,29 @@ private:
                 return false;
         }
 
-        edm::Handle<pat::JetCollection> jets;
-        event.getByToken(jets_token, jets);
-        for(const pat::Jet& jet : *jets) {
-            const auto btag = jet.bDiscriminator("pfDeepFlavourJetTags:probb")
-                              + jet.bDiscriminator("pfDeepFlavourJetTags:probbb")
-                              + jet.bDiscriminator("pfDeepFlavourJetTags:problepb");
-            if(jet.polarP4().pt() > 20 && std::abs(jet.polarP4().eta()) < 2.4 && btag > btagThreshold)
-                return false;
+        // Apply MT cut (if enabled)
+        if(mtCut > 0) {
+            edm::Handle<pat::METCollection> metCollection;
+            event.getByToken(met_token, metCollection);
+            const pat::MET& met = metCollection->at(0);
+            const analysis::LorentzVectorM met_p4(met.pt(), 0, met.phi(), 0);
+            if(Calculate_MT(signalMuon.polarP4(), met_p4) > mtCut) return false;
         }
 
+        // Apply b tag veto (if enabled)
+        if(btagThreshold > 0) {
+            edm::Handle<pat::JetCollection> jets;
+            event.getByToken(jets_token, jets);
+            for(const pat::Jet& jet : *jets) {
+                const auto btag = jet.bDiscriminator("pfDeepFlavourJetTags:probb")
+                                  + jet.bDiscriminator("pfDeepFlavourJetTags:probbb")
+                                  + jet.bDiscriminator("pfDeepFlavourJetTags:problepb");
+                if(jet.polarP4().pt() > 20 && std::abs(jet.polarP4().eta()) < 2.4 && btag > btagThreshold)
+                    return false;
+            }
+        }
+
+        // Apply MET filters
         edm::Handle<edm::TriggerResults> triggerResults;
         event.getByToken(triggerResults_token, triggerResults);
         const edm::TriggerNames& triggerNames = event.triggerNames(*triggerResults);
@@ -104,6 +113,7 @@ private:
                 return false;
         }
 
+        // Put the signal muon into the event
         auto signalMuonOutput = std::make_unique<pat::MuonRefVector>();
         signalMuonOutput->push_back(signalMuonCandidates.at(0));
         event.put(std::move(signalMuonOutput));

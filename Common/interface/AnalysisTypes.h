@@ -67,4 +67,9 @@ inline constexpr TauType GenMatchToTauType(GenLeptonMatch gen_match)
     return TauType::jet;
 }
 
+enum class TauSelection { pt = 1, MVA = 2, DeepTau = 4 };
+ENUM_NAMES(TauSelection) = {
+    { TauSelection::pt, "pt" }, { TauSelection::MVA, "MVA"}, { TauSelection::DeepTau, "DeepTau" }
+};
+
 } // namespace analysis
