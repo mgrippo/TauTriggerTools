@@ -28,18 +28,28 @@
     VAR(Int_t, muon_charge) /* muon charge */ \
     VAR(Float_t, muon_iso) /* muon pfRel isolation */ \
     VAR(Float_t, muon_mt) /* muon transverse mass */ \
+    VAR(Int_t, muon_gen_match) /* matching of the muon with leptons on the generator level:
+                                  Electron = 1, Muon = 2, TauElectron = 3, TauMuon = 4, Tau = 5, NoMatch = 6 */ \
+    VAR(Int_t, muon_gen_charge) /* charge of the gen lepton that was matched with the muon */ \
+    VAR4(Float_t, muon_gen_vis_pt, muon_gen_vis_eta, muon_gen_vis_phi, muon_gen_vis_mass) /* visible 4-momentum of the
+                  gen lepton that was matched with the muon */ \
     /* Basic tau variables */ \
     VAR(UInt_t, tau_sel) /* how tau was selected */ \
     VAR4(Float_t, tau_pt, tau_eta, tau_phi, tau_mass) /* 4-momentum of the tau */ \
     VAR(Int_t, tau_charge) /* tau charge */ \
-    VAR(Int_t, lepton_gen_match) /* matching with leptons on the generator level (see Htautau Twiki for details):
-                                    Electron = 1, Muon = 2, TauElectron = 3, TauMuon = 4, Tau = 5, NoMatch = 6 */\
-    VAR(Int_t, lepton_gen_charge) /* charge of the matched gen lepton */ \
-    VAR4(Float_t, lepton_gen_vis_pt, lepton_gen_vis_eta, \
-                  lepton_gen_vis_phi, lepton_gen_vis_mass) /* visible 4-momentum of the matched gen lepton */ \
+    VAR(Int_t, tau_gen_match) /* matching of the tau with leptons on the generator level:
+                                 Electron = 1, Muon = 2, TauElectron = 3, TauMuon = 4, Tau = 5, NoMatch = 6 */ \
+    VAR(Int_t, tau_gen_charge) /* charge of the gen lepton that was matched with the tau */ \
+    VAR4(Float_t, tau_gen_vis_pt, tau_gen_vis_eta, tau_gen_vis_phi, tau_gen_vis_mass) /* visible 4-momentum of the
+                  gen lepton that was matched with the tau */ \
+    VAR4(Float_t, tau_gen_rad_pt, tau_gen_rad_eta, tau_gen_rad_phi, tau_gen_rad_energy) /* visible 4-momentum of the
+                  initial state radiation emmited by the gen tau */ \
+    VAR4(Int_t, tau_gen_n_charged_hadrons, tau_gen_n_neutral_hadrons, tau_gen_n_gammas, tau_gen_n_gammas_rad) /*
+                number of charged and neutral hadrons, gammas and initial state radiation gammas produced by the tau
+                decay at the generator level */ \
     /* Tau ID variables */ \
     VAR(Int_t, tau_decayMode) /* tau decay mode */ \
-    VAR(Bool_t, tau_oldDecayModeFinding) /* tau passed the old decay mode finding requirements */ \
+    VAR(Int_t, tau_oldDecayModeFinding) /* tau passed the old decay mode finding requirements */ \
     TAU_IDS() \
     /* Tau transverse impact paramters.
        See cmssw/RecoTauTag/RecoTau/plugins/PFTauTransverseImpactParameters.cc for details */ \
