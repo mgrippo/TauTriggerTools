@@ -5,12 +5,14 @@ This file is part of https://github.com/cms-tau-pog/TauTriggerTools. */
 
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
+#include "DataFormats/L1Trigger/interface/Tau.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/PatCandidates/interface/Tau.h"
 
+#include "FWCore/Common/interface/TriggerNames.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -50,20 +52,23 @@ class TupleProducer : public edm::stream::EDProducer<edm::GlobalCache<TupleProdu
 public:
     using SelectionHist = TupleProducerData::SelectionHist;
     using Cutter = cuts::Cutter<>;
+    using exception = analysis::exception;
 
     TupleProducer(const edm::ParameterSet& cfg, const TupleProducerData* producerData) :
         btagThreshold(cfg.getParameter<double>("btagThreshold")),
         isMC(cfg.getParameter<bool>("isMC")),
         triggerProcess(cfg.getParameter<std::string>("triggerProcess")),
-        genEvent_token(mayConsume<GenEventInfoProduct>(cfg.getParameter<edm::InputTag>("genEvent"))),
-        genParticles_token(mayConsume<std::vector<reco::GenParticle>>(cfg.getParameter<edm::InputTag>("genParticles"))),
-        puInfo_token(mayConsume<std::vector<PileupSummaryInfo>>(cfg.getParameter<edm::InputTag>("puInfo"))),
-        vertices_token(consumes<std::vector<reco::Vertex> >(cfg.getParameter<edm::InputTag>("vertices"))),
-        signalMuon_token(consumes<pat::MuonRefVector>(cfg.getParameter<edm::InputTag>("signalMuon"))),
-        taus_token(consumes<pat::TauCollection>(cfg.getParameter<edm::InputTag>("taus"))),
-        jets_token(consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"))),
-        met_token(consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"))),
+        genEvent_token(consumeIT<GenEventInfoProduct>(cfg, "genEvent", false)),
+        genParticles_token(consumeIT<reco::GenParticleCollection>(cfg, "genParticles", false)),
+        puInfo_token(consumeIT<std::vector<PileupSummaryInfo>>(cfg, "puInfo", false)),
+        vertices_token(consumeIT<std::vector<reco::Vertex>>(cfg, "vertices")),
+        signalMuon_token(consumeIT<pat::MuonRefVector>(cfg, "signalMuon")),
+        taus_token(consumeIT<pat::TauCollection>(cfg, "taus")),
+        jets_token(consumeIT<pat::JetCollection>(cfg, "jets")),
+        met_token(consumeIT<pat::METCollection>(cfg, "met")),
         triggerResults_token(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults", "", triggerProcess))),
+        triggerObjects_token(consumeIT<pat::TriggerObjectStandAloneCollection>(cfg, "triggerObjects")),
+        l1Taus_token(consumeIT<l1t::TauBxCollection>(cfg, "l1Taus")),
         triggerDescriptors(cfg.getParameter<edm::VParameterSet>("hltPaths")),
         data(producerData),
         eventTuple(*data->eventTuple),
@@ -91,6 +96,14 @@ private:
     static constexpr float default_value = ::tau_trigger::DefaultFillValue<float>();
     static constexpr int default_int_value = ::tau_trigger::DefaultFillValue<int>();
     static constexpr double deltaR2Thr = 0.5*0.5;
+
+    template<typename T>
+    edm::EDGetTokenT<T> consumeIT(const edm::ParameterSet& cfg, const std::string& name, bool always = true)
+    {
+        if(always)
+            return consumes<T>(cfg.getParameter<edm::InputTag>(name));
+        return mayConsume<T>(cfg.getParameter<edm::InputTag>(name));
+    }
 
     virtual void beginRun(const edm::Run& run, const edm::EventSetup& setup)
     {
@@ -162,10 +175,17 @@ private:
         }
         cut(has_muon, "has_muon");
 
-        // // Apply trigger match
-        // edm::Handle<edm::TriggerResults> triggerResults;
-        // event.getByToken(triggerResults_token, triggerResults);
-        // const edm::TriggerNames& triggerNames = event.triggerNames(*triggerResults);
+        edm::Handle<edm::TriggerResults> triggerResults;
+        event.getByToken(triggerResults_token, triggerResults);
+        const edm::TriggerNames& triggerNames = event.triggerNames(*triggerResults);
+        edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
+        event.getByToken(triggerObjects_token, triggerObjects);
+        edm::Handle<l1t::TauBxCollection> l1Taus;
+        event.getByToken(l1Taus_token, l1Taus);
+
+        const auto muonTriggerMatch = triggerDescriptors.matchTriggerObjects(*triggerResults, *triggerObjects,
+                muon_ref_p4, triggerNames.triggerNames(), deltaR2Thr, true, false);
+        cut(!muonTriggerMatch.matchResults.empty(), "tag_trig_match");
 
         edm::Handle<pat::METCollection> metCollection;
         event.getByToken(met_token, metCollection);
@@ -226,7 +246,7 @@ private:
             eventTuple().tau_gen_rad_phi = has_gen_tau ? static_cast<float>(gen_tau.visible_rad_p4.phi())
                                                        : default_value;
             eventTuple().tau_gen_rad_energy = has_gen_tau ? static_cast<float>(gen_tau.visible_rad_p4.energy())
-                                                        : default_value;
+                                                          : default_value;
             eventTuple().tau_gen_n_charged_hadrons = has_gen_tau ? static_cast<int>(gen_tau.n_charged_hadrons)
                                                                  : default_int_value;
             eventTuple().tau_gen_n_neutral_hadrons = has_gen_tau ? static_cast<int>(gen_tau.n_neutral_hadrons)
@@ -255,6 +275,33 @@ private:
             eventTuple().tau_dz_error = leadChargedHadrCand && leadChargedHadrCand->hasTrackDetails()
                     ? leadChargedHadrCand->dzError() : default_value;
 
+            eventTuple().vis_mass = static_cast<float>((muon_ref_p4 + tau_ref_p4).mass());
+
+            const auto tauTriggerMatch = triggerDescriptors.matchTriggerObjects(*triggerResults, *triggerObjects,
+                    tau_ref_p4, triggerNames.triggerNames(), deltaR2Thr, true, true);
+            eventTuple().hlt_accept = tauTriggerMatch.accept.to_ullong();
+            eventTuple().hlt_acceptAndMatch = tauTriggerMatch.acceptAndMatch.to_ullong();
+            for(const auto& match_entry : tauTriggerMatch.matchResults) {
+                const auto& hlt_obj = triggerObjects->at(match_entry.second.hltObjIndex);
+                eventTuple().hltObj_types.push_back(match_entry.second.objType);
+                eventTuple().hltObj_pt.push_back(static_cast<float>(hlt_obj.polarP4().pt()));
+                eventTuple().hltObj_eta.push_back(static_cast<float>(hlt_obj.polarP4().eta()));
+                eventTuple().hltObj_phi.push_back(static_cast<float>(hlt_obj.polarP4().phi()));
+                eventTuple().hltObj_mass.push_back(static_cast<float>(hlt_obj.polarP4().mass()));
+                eventTuple().hltObj_hasPathName.push_back(match_entry.second.hasPathName.to_ullong());
+                eventTuple().hltObj_isBestMatch.push_back(match_entry.second.isBestMatch.to_ullong());
+                eventTuple().hltObj_hasFilters_1.push_back(match_entry.second.getHasFilters(0).to_ullong());
+                eventTuple().hltObj_hasFilters_2.push_back(match_entry.second.getHasFilters(1).to_ullong());
+            }
+
+            auto l1Tau = MatchL1Taus(tau_ref_p4, *l1Taus, deltaR2Thr, 0);
+            eventTuple().l1Tau_pt = l1Tau ? static_cast<float>(l1Tau->polarP4().pt()) : default_value;
+            eventTuple().l1Tau_eta = l1Tau ? static_cast<float>(l1Tau->polarP4().eta()) : default_value;
+            eventTuple().l1Tau_phi = l1Tau ? static_cast<float>(l1Tau->polarP4().phi()) : default_value;
+            eventTuple().l1Tau_mass = l1Tau ? static_cast<float>(l1Tau->polarP4().mass()) : default_value;
+            eventTuple().l1Tau_hwIso = l1Tau ? l1Tau->hwIso() : default_int_value;
+            eventTuple().l1Tau_hwQual = l1Tau ? l1Tau->hwQual() : default_int_value;
+
             has_good_tau = true;
             eventTuple.Fill();
         }
@@ -275,6 +322,8 @@ private:
     edm::EDGetTokenT<pat::JetCollection> jets_token;
     edm::EDGetTokenT<pat::METCollection> met_token;
     edm::EDGetTokenT<edm::TriggerResults> triggerResults_token;
+    edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_token;
+    edm::EDGetTokenT<l1t::TauBxCollection> l1Taus_token;
 
     TriggerDescriptorCollection triggerDescriptors;
     const TupleProducerData* data;

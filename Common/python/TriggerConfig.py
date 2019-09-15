@@ -22,10 +22,11 @@ def LoadAsVPSet(file_name):
     for trig_name, desc in trig_desc.iteritems():
         filters = [ str(','.join(path_list)) for path_list in desc['filters'] ]
         is_tag = 'is_tag' in desc and desc['is_tag'] > 0
+        leg_types = [ str(leg_type) for leg_type in desc['leg_types'] ]
         pset = cms.PSet(
             path = cms.string(str(trig_name)),
             filters = cms.vstring(filters),
-            leg_types = cms.vint32(desc['leg_types']),
+            leg_types = cms.vstring(leg_types),
             is_tag = cms.bool(is_tag)
         )
         trig_vpset.append(pset)

@@ -3,6 +3,7 @@ This file is part of https://github.com/cms-tau-pog/TauTriggerTools. */
 
 #include "TauTriggerTools/Common/interface/PatHelpers.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "TauTriggerTools/Common/interface/AnalysisTypes.h"
 
 namespace tau_trigger {
 

@@ -1,5 +1,5 @@
 /*! Common CERN ROOT extensions.
-This file is part of https://github.com/hh-italian-group/AnalysisTools. */
+This file is part of https://github.com/cms-tau-pog/TauTriggerTools. */
 
 #pragma once
 

@@ -1,5 +1,5 @@
 /*! Definition of a tuple with all event information that is required for the tau analysis.
-*/
+This file is part of https://github.com/cms-tau-pog/TauTriggerTools. */
 
 #pragma once
 
@@ -63,11 +63,17 @@
     VAR(Float_t, vis_mass) /* visible mu-tau mass */ \
     /* HLT results and objects */ \
     VAR(ULong64_t, hlt_accept) /* HLT accept bits */ \
-    VAR(std::vector<Int_t>, hltObj_types) /* types of the HLT object */ \
+    VAR(ULong64_t, hlt_acceptAndMatch) /* HLT accept & match bits */ \
+    VAR(std::vector<UInt_t>, hltObj_types) /* types of the HLT object */ \
     VAR4(std::vector<Float_t>, hltObj_pt, hltObj_eta, hltObj_phi, hltObj_mass) /* 4-momentum of the HLT object */ \
     VAR(std::vector<ULong64_t>, hltObj_hasPathName) /* whatever the HLT object has a path name */ \
+    VAR(std::vector<ULong64_t>, hltObj_isBestMatch) /* whatever the HLT object the best match for a path name */ \
     VAR(std::vector<ULong64_t>, hltObj_hasFilters_1) /* whatever the HLT object has filters for the first leg */ \
     VAR(std::vector<ULong64_t>, hltObj_hasFilters_2) /* whatever the HLT object has filters for the second leg */ \
+    /* Matched L1 tau */ \
+    VAR4(Float_t, l1Tau_pt, l1Tau_eta, l1Tau_phi, l1Tau_mass) /* 4-momentum of the L1 tau */ \
+    VAR(Int_t, l1Tau_hwIso) /* integer "hardware" isolation value of the L1 tau */ \
+    VAR(Int_t, l1Tau_hwQual) /* integer "hardware" quality value of the L1 tau */ \
     /**/
 
 #define VAR(type, name) DECLARE_BRANCH_VARIABLE(type, name)

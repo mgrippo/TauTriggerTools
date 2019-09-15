@@ -19,6 +19,8 @@ options.register('lumiFile', '', VarParsing.multiplicity.singleton, VarParsing.v
                  "JSON file with lumi mask.")
 options.register('period', 'Run2018', VarParsing.multiplicity.singleton,
                  VarParsing.varType.string, "Data taking period")
+options.register('triggerProcess', 'HLT', VarParsing.multiplicity.singleton,
+                 VarParsing.varType.string, "Trigger process")
 options.register('isMC', True, VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool, "Data or MC")
 options.register('runDeepTau', True, VarParsing.multiplicity.singleton,
@@ -128,9 +130,15 @@ import HLTrigger.HLTfilters.hltHighLevel_cfi as hlt
 
 process.hltFilter = hlt.hltHighLevel.clone(
     TriggerResultsTag = cms.InputTag("TriggerResults", "", "HLT"),
-    HLTPaths = ['HLT_IsoMu27_v*'], #[p + '*' for p in tagHltPaths],
+    HLTPaths = [p + '*' for p in tagHltPaths],
     andOr = cms.bool(True), # True (OR) accept if ANY is true, False (AND) accept if ALL are true
     throw = cms.bool(True) # if True: throws exception if a trigger path is invalid
+)
+
+process.patTriggerUnpacker = cms.EDProducer("PATTriggerObjectStandAloneUnpacker",
+    patTriggerObjectsStandAlone = cms.InputTag("slimmedPatTrigger"),
+    triggerResults              = cms.InputTag('TriggerResults', '', options.triggerProcess),
+    unpackFilterLabels          = cms.bool(True)
 )
 
 process.selectionFilter = cms.EDFilter("TauTriggerSelectionFilter",
@@ -165,7 +173,9 @@ process.tupleProducer = cms.EDProducer("TauTriggerTupleProducer",
     met             = metInputTag,
     btagThreshold   = cms.double(getBtagThreshold(options.period, 'Loose')),
     hltPaths        = hltPaths,
-    triggerProcess  = cms.string("HLT"),
+    triggerProcess  = cms.string(options.triggerProcess),
+    triggerObjects  = cms.InputTag('patTriggerUnpacker'),
+    l1Taus          = cms.InputTag("caloStage2Digis", "Tau", "RECO")
 )
 
 process.p = cms.Path(
@@ -177,6 +187,7 @@ process.p = cms.Path(
     process.selectionFilter +
     process.rerunMvaIsolationSequence +
     getattr(process, updatedTauName) +
+    process.patTriggerUnpacker +
     process.tupleProducer
 )
 
