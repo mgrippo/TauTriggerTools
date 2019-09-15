@@ -1,3 +1,4 @@
+import os
 import re
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
@@ -20,12 +21,10 @@ options.register('period', 'Run2018', VarParsing.multiplicity.singleton,
                  VarParsing.varType.string, "Data taking period")
 options.register('isMC', True, VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool, "Data or MC")
-options.register('requireGenMatch', False, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool, "Require matching at the generator level")
-options.register('useCustomHLT', False, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool, "Use custom HLT paths")
 options.register('runDeepTau', True, VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool, "Run DeepTau IDs")
+options.register('wantSummary', False, VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool, "Print run summary at the end of the job.")
 options.parseArguments()
 
 processName = "TagAndProbe"
@@ -54,14 +53,16 @@ if len(options.lumiFile) > 0:
     import FWCore.PythonUtilities.LumiList as LumiList
     process.source.lumisToProcess = LumiList.LumiList(filename = options.lumiFile).getVLuminosityBlockRange()
 
+year = getYear(options.period)
+
 # Update electron ID according recommendations from https://twiki.cern.ch/twiki/bin/view/CMS/EgammaMiniAODV2
 from RecoEgamma.EgammaTools.EgammaPostRecoTools import setupEgammaPostRecoSeq
 ele_era = {
-    'Run2016': '2016-Legacy',
-    'Run2017': '2017-Nov17ReReco',
+    2016: '2016-Legacy',
+    2017: '2017-Nov17ReReco',
+    2018: '2018-Prompt'
 }
-ele_era.update(dict.fromkeys(['Run2018', 'Run2018ABC', 'Run2018D'], '2018-Prompt'))
-setupEgammaPostRecoSeq(process, runVID=True, runEnergyCorrections=False, era=ele_era[options.period])
+setupEgammaPostRecoSeq(process, runVID=True, runEnergyCorrections=False, era=ele_era[year])
 
 # Update tau IDs according recommendations from https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuidePFTauID
 import RecoTauTag.RecoTau.tools.runTauIdMVA as tauIdConfig
@@ -78,7 +79,7 @@ tauSrc_InputTag = cms.InputTag(updatedTauName)
 # Using post-Moriond2019 (a more complete) list of noisy crystals
 process.metFilterSequence = cms.Sequence()
 customMetFilters = cms.PSet()
-if options.period in [ 'Run2017', 'Run2018', 'Run2018ABC', 'Run2018D' ]:
+if year in [ 2017, 2018 ]:
     process.load('RecoMET.METFilters.ecalBadCalibFilter_cfi')
     baddetEcallist = cms.vuint32([
         872439604,872422825,872420274,872423218,872423215,872416066,872435036,872439336,
@@ -99,6 +100,7 @@ if options.period in [ 'Run2017', 'Run2018', 'Run2018ABC', 'Run2018D' ]:
     customMetFilters.ecalBadCalibReducedMINIAODFilter = cms.InputTag("ecalBadCalibReducedMINIAODFilter")
 
 # Re-apply MET corrections
+process.metSequence = cms.Sequence()
 if options.period in [ 'Run2016', 'Run2017' ]:
     met_run_params = { }
     if options.period == 'Run2017':
@@ -112,36 +114,47 @@ if options.period in [ 'Run2016', 'Run2017' ]:
             }
         }
     from PhysicsTools.PatUtils.tools.runMETCorrectionsAndUncertainties import runMetCorAndUncFromMiniAOD
-    runMetCorAndUncFromMiniAOD(process, isData = not options.isMC, **met_run_params)
-    metInputTag = cms.InputTag('slimmedMETs', '', processName)
+    runMetCorAndUncFromMiniAOD(process, isData = not options.isMC, postfix="Updated", **met_run_params)
+    metInputTag = cms.InputTag('slimmedMETsUpdated', '', processName)
+    process.metSequence += process.fullPatMetSequenceUpdated
 else:
     metInputTag = cms.InputTag('slimmedMETs')
 
+from TauTriggerTools.Common import TriggerConfig
+trigFile = '{}/src/TauTriggerTools/TauTagAndProbe/data/{}_triggers.json'.format(os.environ['CMSSW_BASE'], year)
+hltPaths, tagHltPaths = TriggerConfig.LoadAsVPSet(trigFile)
+
 import HLTrigger.HLTfilters.hltHighLevel_cfi as hlt
+
 process.hltFilter = hlt.hltHighLevel.clone(
     TriggerResultsTag = cms.InputTag("TriggerResults", "", "HLT"),
-    HLTPaths = ['HLT_IsoMu27_v*'],
-    andOr = cms.bool(True), # how to deal with multiple triggers:
-                            # True (OR) accept if ANY is true, False (AND) accept if ALL are true
-    throw = cms.bool(True) #if True: throws exception if a trigger path is invalid
+    HLTPaths = ['HLT_IsoMu27_v*'], #[p + '*' for p in tagHltPaths],
+    andOr = cms.bool(True), # True (OR) accept if ANY is true, False (AND) accept if ALL are true
+    throw = cms.bool(True) # if True: throws exception if a trigger path is invalid
 )
 
 process.selectionFilter = cms.EDFilter("TauTriggerSelectionFilter",
-    electrons        = cms.InputTag('slimmedElectrons'),
-    muons            = cms.InputTag('slimmedMuons'),
-    jets             = cms.InputTag('slimmedJets'),
-    met              = metInputTag,
-    triggerResults   = cms.InputTag('TriggerResults', '', 'PAT'),
-    customMetFilters = customMetFilters,
-    btagThreshold    = cms.double(-1),
-    metFilters       = cms.vstring(getMetFilters(options.period, options.isMC)),
-    mtCut            = cms.double(-1)
+    electrons         = cms.InputTag('slimmedElectrons'),
+    muons             = cms.InputTag('slimmedMuons'),
+    jets              = cms.InputTag('slimmedJets'),
+    met               = metInputTag,
+    metFiltersResults = cms.InputTag('TriggerResults', '', 'PAT'),
+    customMetFilters  = customMetFilters,
+    btagThreshold     = cms.double(-1),
+    metFilters        = cms.vstring(getMetFilters(options.period, options.isMC)),
+    mtCut             = cms.double(-1)
+)
+
+process.summaryProducer = cms.EDProducer("TauTriggerSummaryTupleProducer",
+    isMC            = cms.bool(options.isMC),
+    genEvent        = cms.InputTag('generator'),
+    puInfo          = cms.InputTag('slimmedAddPileupInfo'),
+    vertices        = cms.InputTag('offlineSlimmedPrimaryVertices'),
+    hltPaths        = hltPaths
 )
 
 process.tupleProducer = cms.EDProducer("TauTriggerTupleProducer",
     isMC            = cms.bool(options.isMC),
-    requireGenMatch = cms.bool(options.requireGenMatch),
-    applyBtagVeto   = cms.bool(True),
     genEvent        = cms.InputTag('generator'),
     puInfo          = cms.InputTag('slimmedAddPileupInfo'),
     genParticles    = cms.InputTag('prunedGenParticles'),
@@ -151,12 +164,16 @@ process.tupleProducer = cms.EDProducer("TauTriggerTupleProducer",
     jets            = cms.InputTag('slimmedJets'),
     met             = metInputTag,
     btagThreshold   = cms.double(getBtagThreshold(options.period, 'Loose')),
+    hltPaths        = hltPaths,
+    triggerProcess  = cms.string("HLT"),
 )
 
 process.p = cms.Path(
-    process.egammaPostRecoSeq +
-    process.metFilterSequence +
+    process.summaryProducer +
     process.hltFilter +
+    process.egammaPostRecoSeq +
+    process.metSequence +
+    process.metFilterSequence +
     process.selectionFilter +
     process.rerunMvaIsolationSequence +
     getattr(process, updatedTauName) +
@@ -166,4 +183,4 @@ process.p = cms.Path(
 # Verbosity customization
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = getReportInterval(process.maxEvents.input.value())
-process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(False) )
+process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(options.wantSummary) )

@@ -59,6 +59,15 @@
     VAR(Float_t, tau_ip3d_error) /* uncertainty of the 3D impact parameter measurement */ \
     VAR(Float_t, tau_dz) /* tau dz of the leadChargedHadrCand wrt to the primary vertex */ \
     VAR(Float_t, tau_dz_error) /* uncertainty of the tau dz measurement */ \
+    /* mu-tau variables */ \
+    VAR(Float_t, vis_mass) /* visible mu-tau mass */ \
+    /* HLT results and objects */ \
+    VAR(ULong64_t, hlt_accept) /* HLT accept bits */ \
+    VAR(std::vector<Int_t>, hltObj_types) /* types of the HLT object */ \
+    VAR4(std::vector<Float_t>, hltObj_pt, hltObj_eta, hltObj_phi, hltObj_mass) /* 4-momentum of the HLT object */ \
+    VAR(std::vector<ULong64_t>, hltObj_hasPathName) /* whatever the HLT object has a path name */ \
+    VAR(std::vector<ULong64_t>, hltObj_hasFilters_1) /* whatever the HLT object has filters for the first leg */ \
+    VAR(std::vector<ULong64_t>, hltObj_hasFilters_2) /* whatever the HLT object has filters for the second leg */ \
     /**/
 
 #define VAR(type, name) DECLARE_BRANCH_VARIABLE(type, name)
