@@ -28,6 +28,7 @@ public:
     using Cutter = cuts::Cutter<>;
 
     SelectionFilter(const edm::ParameterSet& cfg) :
+        enabled(cfg.getParameter<bool>("enabled")),
         btagThreshold(cfg.getParameter<double>("btagThreshold")),
         mtCut(cfg.getParameter<double>("mtCut")),
         metFilters(cfg.getParameter<std::vector<std::string>>("metFilters")),
@@ -49,6 +50,10 @@ public:
 private:
     virtual bool filter(edm::Event& event, const edm::EventSetup&) override
     {
+        if(!enabled) {
+            event.put(std::make_unique<pat::MuonRefVector>());
+            return true;
+        }
         bool result = true;
         try {
             Cutter cut(&selection);
@@ -170,6 +175,7 @@ private:
     }
 
 private:
+    const bool enabled;
     const double btagThreshold, mtCut;
     const std::vector<std::string> metFilters;
 

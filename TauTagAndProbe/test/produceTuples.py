@@ -21,10 +21,14 @@ options.register('period', 'Run2018', VarParsing.multiplicity.singleton,
                  VarParsing.varType.string, "Data taking period")
 options.register('triggerProcess', 'HLT', VarParsing.multiplicity.singleton,
                  VarParsing.varType.string, "Trigger process")
+options.register('metFiltersProcess', '', VarParsing.multiplicity.singleton,
+                 VarParsing.varType.string, "Process for MET filters")
 options.register('isMC', True, VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool, "Data or MC")
 options.register('runDeepTau', True, VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool, "Run DeepTau IDs")
+options.register('pureGenMode', False, VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool, "Don't apply any offline selection or tagging.")
 options.register('wantSummary', False, VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool, "Print run summary at the end of the job.")
 options.parseArguments()
@@ -101,6 +105,13 @@ if year in [ 2017, 2018 ]:
     process.metFilterSequence += process.ecalBadCalibReducedMINIAODFilter
     customMetFilters.ecalBadCalibReducedMINIAODFilter = cms.InputTag("ecalBadCalibReducedMINIAODFilter")
 
+if len(options.metFiltersProcess) == 0:
+    metFiltersProcess = 'PAT'
+    if year in [ 2016, 2018 ] and not options.isMC:
+        metFiltersProcess = 'RECO'
+else:
+    metFiltersProcess = options.metFiltersProcess
+
 # Re-apply MET corrections
 process.metSequence = cms.Sequence()
 if options.period in [ 'Run2016', 'Run2017' ]:
@@ -142,11 +153,12 @@ process.patTriggerUnpacker = cms.EDProducer("PATTriggerObjectStandAloneUnpacker"
 )
 
 process.selectionFilter = cms.EDFilter("TauTriggerSelectionFilter",
+    enabled           = cms.bool(not options.pureGenMode),
     electrons         = cms.InputTag('slimmedElectrons'),
     muons             = cms.InputTag('slimmedMuons'),
     jets              = cms.InputTag('slimmedJets'),
     met               = metInputTag,
-    metFiltersResults = cms.InputTag('TriggerResults', '', 'PAT'),
+    metFiltersResults = cms.InputTag('TriggerResults', '', metFiltersProcess),
     customMetFilters  = customMetFilters,
     btagThreshold     = cms.double(-1),
     metFilters        = cms.vstring(getMetFilters(options.period, options.isMC)),

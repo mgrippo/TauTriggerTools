@@ -68,7 +68,7 @@ def getMetFilters(period, isMC):
 
     metFilters_common = [
         "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter", "Flag_HBHENoiseIsoFilter",
-        "Flag_EcalDeadCellTriggerPrimitiveFilter", "Flag_BadPFMuonFilter", "ecalBadCalibReducedMINIAODFilter"
+        "Flag_EcalDeadCellTriggerPrimitiveFilter", "Flag_BadPFMuonFilter"
     ]
     filters = metFilters_common[:]
     if period in ['Run2017', 'Run2018', 'Run2018ABC', 'Run2018D']:
