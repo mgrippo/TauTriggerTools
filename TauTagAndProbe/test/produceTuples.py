@@ -8,29 +8,27 @@ options = VarParsing('analysis')
 options.register('inputFileList', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
                  "Text file with a list of the input root files to process.")
 options.register('fileNamePrefix', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
-                 "Prefix to add to input file names.")
-options.register('outputTupleFile', 'eventTuple.root', VarParsing.multiplicity.singleton,
-                 VarParsing.varType.string, "Event tuple file.")
-options.register('skipEvents', -1, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.int, "Number of events to skip")
+                 "Prefix to add to input file names. Use file: for the files in the local file system.")
+options.register('outputTupleFile', 'eventTuple.root', VarParsing.multiplicity.singleton, VarParsing.varType.string,
+                 "Event tuple file.")
+options.register('skipEvents', -1, VarParsing.multiplicity.singleton, VarParsing.varType.int,
+                 "Number of events to skip")
 options.register('eventList', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
                  "List of events to process.")
 options.register('lumiFile', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
                  "JSON file with lumi mask.")
-options.register('period', 'Run2018', VarParsing.multiplicity.singleton,
-                 VarParsing.varType.string, "Data taking period")
-options.register('triggerProcess', 'HLT', VarParsing.multiplicity.singleton,
-                 VarParsing.varType.string, "Trigger process")
-options.register('metFiltersProcess', '', VarParsing.multiplicity.singleton,
-                 VarParsing.varType.string, "Process for MET filters")
-options.register('isMC', True, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool, "Data or MC")
-options.register('runDeepTau', True, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool, "Run DeepTau IDs")
-options.register('pureGenMode', False, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool, "Don't apply any offline selection or tagging.")
-options.register('wantSummary', False, VarParsing.multiplicity.singleton,
-                 VarParsing.varType.bool, "Print run summary at the end of the job.")
+options.register('period', 'Run2018', VarParsing.multiplicity.singleton, VarParsing.varType.string,
+                 "Data taking period")
+options.register('triggerProcess', 'HLT', VarParsing.multiplicity.singleton, VarParsing.varType.string,
+                 "Trigger process")
+options.register('metFiltersProcess', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
+                 "Process for MET filters. If empty, it will be deduced based on the period.")
+options.register('isMC', True, VarParsing.multiplicity.singleton, VarParsing.varType.bool, "MC or Data")
+options.register('runDeepTau', True, VarParsing.multiplicity.singleton, VarParsing.varType.bool, "Run DeepTau IDs")
+options.register('pureGenMode', False, VarParsing.multiplicity.singleton, VarParsing.varType.bool,
+                 "Don't apply any offline selection or tagging.")
+options.register('wantSummary', False, VarParsing.multiplicity.singleton, VarParsing.varType.bool,
+                 "Print run summary at the end of the job.")
 options.parseArguments()
 
 processName = "TagAndProbe"
@@ -134,7 +132,7 @@ else:
     metInputTag = cms.InputTag('slimmedMETs')
 
 from TauTriggerTools.Common import TriggerConfig
-trigFile = '{}/src/TauTriggerTools/TauTagAndProbe/data/{}_triggers.json'.format(os.environ['CMSSW_BASE'], year)
+trigFile = '{}/src/TauTriggerTools/TauTagAndProbe/data/{}/triggers.json'.format(os.environ['CMSSW_BASE'], year)
 hltPaths, tagHltPaths = TriggerConfig.LoadAsVPSet(trigFile)
 
 import HLTrigger.HLTfilters.hltHighLevel_cfi as hlt
