@@ -23,6 +23,8 @@ options.register('triggerProcess', 'HLT', VarParsing.multiplicity.singleton, Var
                  "Trigger process")
 options.register('metFiltersProcess', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
                  "Process for MET filters. If empty, it will be deduced based on the period.")
+options.register('globalTag', '', VarParsing.multiplicity.singleton, VarParsing.varType.string,
+                 "Global tag. If empty, it will be deduced based on the period.")
 options.register('isMC', True, VarParsing.multiplicity.singleton, VarParsing.varType.bool, "MC or Data")
 options.register('runDeepTau', True, VarParsing.multiplicity.singleton, VarParsing.varType.bool, "Run DeepTau IDs")
 options.register('pureGenMode', False, VarParsing.multiplicity.singleton, VarParsing.varType.bool,
@@ -37,7 +39,10 @@ process = cms.Process(processName)
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 
-process.GlobalTag.globaltag = getGlobalTag(options.period, options.isMC)
+if len(options.globalTag) == 0:
+    process.GlobalTag.globaltag = getGlobalTag(options.period, options.isMC)
+else:
+    process.GlobalTag.globaltag = options.globalTag
 process.source = cms.Source('PoolSource', fileNames = cms.untracked.vstring())
 process.TFileService = cms.Service('TFileService', fileName=cms.string(options.outputTupleFile))
 
@@ -60,13 +65,16 @@ if len(options.lumiFile) > 0:
 year = getYear(options.period)
 
 # Update electron ID according recommendations from https://twiki.cern.ch/twiki/bin/view/CMS/EgammaMiniAODV2
-from RecoEgamma.EgammaTools.EgammaPostRecoTools import setupEgammaPostRecoSeq
-ele_era = {
-    2016: '2016-Legacy',
-    2017: '2017-Nov17ReReco',
-    2018: '2018-Prompt'
-}
-setupEgammaPostRecoSeq(process, runVID=True, runEnergyCorrections=False, era=ele_era[year])
+if options.pureGenMode:
+    process.egammaPostRecoSeq = cms.Sequence()
+else:
+    from RecoEgamma.EgammaTools.EgammaPostRecoTools import setupEgammaPostRecoSeq
+    ele_era = {
+        2016: '2016-Legacy',
+        2017: '2017-Nov17ReReco',
+        2018: '2018-Prompt'
+    }
+    setupEgammaPostRecoSeq(process, runVID=True, runEnergyCorrections=False, era=ele_era[year])
 
 # Update tau IDs according recommendations from https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuidePFTauID
 import RecoTauTag.RecoTau.tools.runTauIdMVA as tauIdConfig
@@ -83,7 +91,7 @@ tauSrc_InputTag = cms.InputTag(updatedTauName)
 # Using post-Moriond2019 (a more complete) list of noisy crystals
 process.metFilterSequence = cms.Sequence()
 customMetFilters = cms.PSet()
-if year in [ 2017, 2018 ]:
+if not options.pureGenMode and year in [ 2017, 2018 ]:
     process.load('RecoMET.METFilters.ecalBadCalibFilter_cfi')
     baddetEcallist = cms.vuint32([
         872439604,872422825,872420274,872423218,872423215,872416066,872435036,872439336,
@@ -112,7 +120,7 @@ else:
 
 # Re-apply MET corrections
 process.metSequence = cms.Sequence()
-if options.period in [ 'Run2016', 'Run2017' ]:
+if not options.pureGenMode and options.period in [ 'Run2016', 'Run2017' ]:
     met_run_params = { }
     if options.period == 'Run2017':
         met_run_params = {
