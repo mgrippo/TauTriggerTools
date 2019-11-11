@@ -15,7 +15,7 @@ parser.add_argument('--site', required=True, type=str, help="Site for stage out.
 parser.add_argument('--output', required=True, type=str, help="output path after /store/user/USERNAME")
 parser.add_argument('--blacklist', required=False, type=str, default="",
 					help="list of sites where the jobs shouldn't run")
-parser.add_argument('--whitelist', required=False, type=str, default="",
+parser.add_argument('--whitelist', required=True, type=str, default="",
 					help="list of sites where the jobs can run")
 parser.add_argument('--jobNames', required=False, type=str, default="",
 					help="list of job names to submit (if not specified - submit all)")
@@ -52,6 +52,7 @@ config.Data.allowNonValidInputDataset = args.allowNonValid
 config.General.transferOutputs = True
 config.General.transferLogs = False
 config.Data.publication = False
+config.Data.ignoreLocality = True
 
 config.Site.storageSite = args.site
 config.Data.outLFNDirBase = "/store/user/{}/{}".format(getUsernameFromSiteDB(), args.output)
