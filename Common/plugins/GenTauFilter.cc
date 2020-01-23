@@ -43,6 +43,8 @@ private:
         int count_tau_mu = 0;
         for(unsigned n = 0; n < lepton_results.size(); ++n){
             analysis::gen_truth::LeptonMatchResult lepton_result = lepton_results.at(n);
+            if(lepton_result.visible_p4.pt() <= 20) continue;
+            if(!(std::abs(lepton_result.visible_p4.eta()) < 2.1)) continue;
             if(lepton_result.match == analysis::GenLeptonMatch::Tau) ++count_tau_h;
             if(lepton_result.match == analysis::GenLeptonMatch::TauElectron) ++count_tau_e;
             if(lepton_result.match == analysis::GenLeptonMatch::TauMuon) ++count_tau_mu;

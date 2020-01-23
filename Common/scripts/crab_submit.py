@@ -15,7 +15,7 @@ parser.add_argument('--site', required=True, type=str, help="Site for stage out.
 parser.add_argument('--output', required=True, type=str, help="output path after /store/user/USERNAME")
 parser.add_argument('--blacklist', required=False, type=str, default="",
 					help="list of sites where the jobs shouldn't run")
-parser.add_argument('--whitelist', required=True, type=str, default="",
+parser.add_argument('--whitelist', required=False, type=str, default="",
 					help="list of sites where the jobs can run")
 parser.add_argument('--jobNames', required=False, type=str, default="",
 					help="list of job names to submit (if not specified - submit all)")
@@ -29,8 +29,12 @@ parser.add_argument('--splitting', required=False, default="Automatic",
 parser.add_argument('--unitsPerJob', required=False, type=int, default=1000, help="number of units per job")
 parser.add_argument('--maxMemory', required=False, type=int, default=2000,
 					help="maximum amount of memory (in MB) a job is allowed to use (default: 2000 MB )")
+# parser.add_argument('--maxJobRuntimeMin', required=False, type=int, default=1200,
+# 					help="The maximum runtime (in minutes) per job (default: None)")
 parser.add_argument('--numCores', required=False, type=int, default=1, help="number of cores per job (default: 1)")
 parser.add_argument('--allowNonValid', action="store_true", help="Allow nonvalid dataset as an input.")
+parser.add_argument('--ignoreLocality', action="store_true", help="ignore local site (default:False)")
+parser.add_argument('--ignoreGlobalBlacklist', action="store_true", help="ignore global balck list (default:False)")
 parser.add_argument('job_file', type=str, nargs='+', help="text file with jobs descriptions")
 args = parser.parse_args()
 
@@ -45,6 +49,7 @@ config.General.workArea = args.workArea
 config.JobType.pluginName = 'Analysis'
 config.JobType.psetName = args.cfg
 config.JobType.maxMemoryMB = args.maxMemory
+#config.JobType.maxJobRuntimeMin = args.maxJobRuntimeMin
 config.JobType.numCores = args.numCores
 
 config.Data.inputDBS = args.inputDBS
@@ -52,9 +57,10 @@ config.Data.allowNonValidInputDataset = args.allowNonValid
 config.General.transferOutputs = True
 config.General.transferLogs = False
 config.Data.publication = False
-config.Data.ignoreLocality = True
+config.Data.ignoreLocality = args.ignoreLocality
 
 config.Site.storageSite = args.site
+config.Site.ignoreGlobalBlacklist = args.ignoreGlobalBlacklist
 config.Data.outLFNDirBase = "/store/user/{}/{}".format(getUsernameFromSiteDB(), args.output)
 
 if len(args.blacklist) != 0:

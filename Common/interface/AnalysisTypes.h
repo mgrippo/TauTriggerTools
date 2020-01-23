@@ -4,6 +4,10 @@ This file is part of https://github.com/cms-tau-pog/TauTriggerTools. */
 #pragma once
 
 #include "EnumNameMap.h"
+#include <Math/PtEtaPhiE4D.h>
+#include <Math/PtEtaPhiM4D.h>
+#include <Math/PxPyPzE4D.h>
+#include <Math/LorentzVector.h>
 
 namespace analysis {
 
